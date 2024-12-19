@@ -1,7 +1,6 @@
 #include <iostream>
 #include <vector>
 #include <string>
-#include <algorithm>
 #include <regex>
 #include "sqlite/sqlite3.h"
 #include "expense.h"
