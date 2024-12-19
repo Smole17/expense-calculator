@@ -4,40 +4,35 @@
 #include <algorithm>
 #include <regex>
 #include "sqlite/sqlite3.h"
+#include "expense.h"
 
 using namespace std;
-
-struct Expense {
-    double amount;
-    string category;
-    string description;
-    string date;
-};
 
 class ExpenseManager {
 private:
     vector<Expense> expenses;
-    sqlite3* db;
+    sqlite3 *db;
 
     void loadExpensesFromDB() {
-        const char* sql = "SELECT amount, category, description, date FROM expenses;";
-        sqlite3_stmt* stmt;
+        const char *sql = "SELECT amount, category, description, date FROM expenses;";
+        sqlite3_stmt *stmt;
         if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) == SQLITE_OK) {
             while (sqlite3_step(stmt) == SQLITE_ROW) {
-                Expense e;
-                e.amount = sqlite3_column_double(stmt, 0);
-                e.category = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
-                e.description = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
-                e.date = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 3));
+                Expense e = *new Expense(
+                        sqlite3_column_double(stmt, 0),
+                        reinterpret_cast<const char *>(sqlite3_column_text(stmt, 1)),
+                        reinterpret_cast<const char *>(sqlite3_column_text(stmt, 2)),
+                        reinterpret_cast<const char *>(sqlite3_column_text(stmt, 3))
+                );
                 expenses.push_back(e);
             }
         }
         sqlite3_finalize(stmt);
     }
 
-    void saveExpenseToDB(const Expense& expense) {
-        const char* sql = "INSERT INTO expenses (amount, category, description, date) VALUES (?, ?, ?, ?);";
-        sqlite3_stmt* stmt;
+    void saveExpenseToDB(const Expense &expense) {
+        const char *sql = "INSERT INTO expenses (amount, category, description, date) VALUES (?, ?, ?, ?);";
+        sqlite3_stmt *stmt;
         if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) == SQLITE_OK) {
             sqlite3_bind_double(stmt, 1, expense.amount);
             sqlite3_bind_text(stmt, 2, expense.category.c_str(), -1, SQLITE_STATIC);
@@ -48,7 +43,7 @@ private:
         sqlite3_finalize(stmt);
     }
 
-    bool isValidDate(const string& date) const {
+    bool isValidDate(const string &date) const {
         regex date_regex(R"(\d{4}-\d{2}-\d{2})");
         return regex_match(date, date_regex);
     }
@@ -64,7 +59,7 @@ public:
             exit(1);
         }
 
-        const char* sql = R"(
+        const char *sql = R"(
             CREATE TABLE IF NOT EXISTS expenses (
                 id INTEGER PRIMARY KEY,
                 amount REAL,
@@ -86,7 +81,7 @@ public:
         sqlite3_close(db);
     }
 
-    void addExpense(double amount, const string& category, const string& description, const string& date) {
+    void addExpense(double amount, const string &category, const string &description, const string &date) {
         if (!isValidAmount(amount)) {
             cout << "Invalid amount. It must be a positive number." << endl;
             return;
@@ -103,7 +98,7 @@ public:
     }
 
     void viewExpenses() const {
-        for (const auto& expense : expenses) {
+        for (const auto &expense: expenses) {
             cout << "Amount: " << expense.amount
                  << ", Category: " << expense.category
                  << ", Description: " << expense.description
@@ -113,14 +108,14 @@ public:
 
     void viewTotalExpenses() const {
         double total = 0;
-        for (const auto& expense : expenses) {
+        for (const auto &expense: expenses) {
             total += expense.amount;
         }
         cout << "Total Expenses: " << total << endl;
     }
 
-    void searchByCategory(const string& category) const {
-        for (const auto& expense : expenses) {
+    void searchByCategory(const string &category) const {
+        for (const auto &expense: expenses) {
             if (expense.category == category) {
                 cout << "Amount: " << expense.amount
                      << ", Description: " << expense.description
@@ -130,22 +125,20 @@ public:
     }
 
     void sortExpensesByAmount() {
-        sort(expenses.begin(), expenses.end(), [](const Expense& a, const Expense& b) {
-            return a.amount < b.amount;
-        });
+        quick_sort_by_amount(expenses, 0, expenses.size() - 1);
+
         cout << "Expenses sorted by amount." << endl;
     }
 
     void sortExpensesByDate() {
-        sort(expenses.begin(), expenses.end(), [](const Expense& a, const Expense& b) {
-            return a.date < b.date;
-        });
+        quick_sort_by_date(expenses, 0, expenses.size() - 1);
+
         cout << "Expenses sorted by date." << endl;
     }
 };
 
 int main() {
-    auto* manager = new ExpenseManager();
+    auto *manager = new ExpenseManager();
     int choice = -1;
 
     do {
