@@ -22,7 +22,7 @@ int partition_by_amount(vector<Expense>& expenses, int start, int end) {
     Expense pivot = expenses[end];
     int i = (start - 1);
     for (int j = start; j < end; j++) {
-        if (expenses[j].amount < pivot.amount) {
+        if (-expenses[j].amount < -pivot.amount) {
             i++;
 
             swap(expenses[i], expenses[j]);
